@@ -8,6 +8,7 @@ import { PromiseDelegate } from '@lumino/coreutils';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 import { WebsocketProvider as YWebsocketProvider } from 'y-websocket';
+import { ServerConnection } from '@jupyterlab/services';
 import { IDocumentProvider, IDocumentProviderFactory } from './tokens';
 
 /**
@@ -30,18 +31,22 @@ export class WebSocketProvider
    * @param options The instantiation options for a WebSocketProvider
    */
   constructor(options: WebSocketProvider.IOptions) {
+    const settings = options.serverSettings ?? ServerConnection.makeSettings();
+
     super(
       options.url,
       options.format + ':' + options.contentType + ':' + options.path,
       options.ymodel.ydoc,
       {
-        awareness: options.ymodel.awareness
+        awareness: options.ymodel.awareness,
+        params: settings.appendToken ? { token: settings.token } : {}
       }
     );
     this._path = options.path;
     this._contentType = options.contentType;
     this._format = options.format;
     this._serverUrl = options.url;
+    this._settings = settings;
 
     // Message handler that receives the rename acknowledge
     this.messageHandlers[127] = (
@@ -104,6 +109,12 @@ export class WebSocketProvider
         ':' +
         this._path;
       this.url = this.bcChannel;
+      // If token authentication is in use.
+      const token = this._settings.token;
+      if (this._settings.appendToken && token !== '') {
+        this.url += `?token=${encodeURIComponent(token)}`;
+      }
+
       this.connectBc();
     }
   }
@@ -132,6 +143,7 @@ export class WebSocketProvider
   private _format: string;
   private _serverUrl: string;
   private _renameAck: PromiseDelegate<boolean>;
+  private _settings: ServerConnection.ISettings;
 }
 
 /**
@@ -151,5 +163,10 @@ export namespace WebSocketProvider {
      * The user data
      */
     user: ICurrentUser;
+
+    /**
+     * The connection settings
+     */
+    serverSettings: ServerConnection.ISettings
   }
 }

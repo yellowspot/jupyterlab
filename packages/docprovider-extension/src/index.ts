@@ -41,7 +41,8 @@ const docProviderPlugin: JupyterFrontEndPlugin<IDocumentProviderFactory> = {
         ? new WebSocketProvider({
             ...options,
             url,
-            user
+            user,
+            serverSettings: server,
           })
         : new ProviderMock();
     };
